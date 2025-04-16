@@ -4,6 +4,7 @@ import comtypes.client
 import tkinter as tk
 from tkinter import filedialog
 from pythoncom import CoInitialize, CoUninitialize
+import comtypes.automation
 import os
 
 def ensure_long_path(filepath):
@@ -61,8 +62,12 @@ def main():
         openstaad._FlagAsMethod("Analyze")
         openstaad._FlagAsMethod("isAnalyzing")
         openstaad._FlagAsMethod("SaveModel")
+        openstaad._FlagAsMethod("GetErrorMessage")
 
         geometry._FlagAsMethod("SetFlagForHiddenEntities")
+        geometry._FlagAsMethod("GetNodeList")
+        geometry._FlagAsMethod("GetNodeCount")
+
         view._FlagAsMethod("ShowAllMembers")
         view._FlagAsMethod("ShowFront")
         command._FlagAsMethod("PerformAnalysis")
@@ -88,18 +93,30 @@ def main():
         
         # View all the members (show hidden entities)
         print("Flags of Hidden")
-        geometry.SetFlagForHiddenEntities()
+        geometry.SetFlagForHiddenEntities(0)
 
-        # Show front view
-        print("Front view")
-        try:
-            view.ShowFront()
-        except Exception as e:
-            print(f"Front view restricted: {e}")
+       
+        print("node_count",geometry.GetNodeCount())	
 
+
+        
         # Perform initial analysis (with print option 6)
         print("Performing static analysis (PrintOption: 6)...")
-        command.PerformAnalysis(6)
+        # command.PerformAnalysis(6)
+
+       # Create a VARIANT object to hold the node list
+        Nodelist = comtypes.automation.VARIANT()
+
+        # Call GetNodeList to populate the Nodelist VARIANT
+        print("Node",geometry.GetNodeList(Nodelist))
+
+        # Convert the VARIANT to a Python list
+        if Nodelist.value:  # Ensure there is data in the VARIANT
+            NodeList = list(Nodelist.value)
+            print("Node list:", NodeList)
+        else:
+            print("No nodes found.")
+
 
         # Save the model
         openstaad.SaveModel(1)
@@ -109,15 +126,19 @@ def main():
         openstaad.SetSilentMode(1)
 
         # Run the full analysis
-        print("Running full analysis in silent mode...")
-        openstaad.Analyze()
+        # print("Running full analysis in silent mode...")
+        # openstaad.Analyze()
 
-        # Wait until the analysis completes
-        while openstaad.isAnalyzing():
-            print("Analysis in progress...")
-            time.sleep(5)
+        # # Wait until the analysis completes
+        # while openstaad.isAnalyzing():
+        #     print("Analysis in progress...")
+        #     time.sleep(5)
 
-        print("Analysis completed successfully.")
+        # print("Analysis completed successfully.")
+
+
+        errors = openstaad.GetErrorMessage()
+        print("errors", errors)
 
     except Exception as e:
         print(f"Error occurred: {e}")
